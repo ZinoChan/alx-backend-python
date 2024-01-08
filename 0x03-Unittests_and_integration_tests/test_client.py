@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-"""Unit and integration tests for the GitHub Org Client module."""
-
+"""A module for testing the client module.
+"""
 import unittest
 from typing import Dict
-from unittest.mock import MagicMock, Mock, PropertyMock, patch
+from unittest.mock import (
+    MagicMock,
+    Mock,
+    PropertyMock,
+    patch,
+)
 from parameterized import parameterized, parameterized_class
 from requests import HTTPError
 
-from client import GithubOrgClient
+from client import (
+    GithubOrgClient
+)
 from fixtures import TEST_PAYLOAD
 
 
 class TestGithubOrgClient(unittest.TestCase):
-    """Tests the GithubOrgClient class."""
-
+    """Tests the `GithubOrgClient` class."""
     @parameterized.expand([
         ("google", {'login': "google"}),
         ("abc", {'login': "abc"}),
@@ -21,16 +27,16 @@ class TestGithubOrgClient(unittest.TestCase):
     @patch(
         "client.get_json",
     )
-    def test_org_method(self, org: str, resp: Dict, mocked_get_json: MagicMock) -> None:
+    def test_org(self, org: str, resp: Dict, mocked_fxn: MagicMock) -> None:
         """Tests the `org` method."""
-        mocked_get_json.return_value = MagicMock(return_value=resp)
+        mocked_fxn.return_value = MagicMock(return_value=resp)
         gh_org_client = GithubOrgClient(org)
         self.assertEqual(gh_org_client.org(), resp)
-        mocked_get_json.assert_called_once_with(
+        mocked_fxn.assert_called_once_with(
             "https://api.github.com/orgs/{}".format(org)
         )
 
-    def test_public_repos_url_property(self) -> None:
+    def test_public_repos_url(self) -> None:
         """Tests the `_public_repos_url` property."""
         with patch(
                 "client.GithubOrgClient.org",
@@ -45,13 +51,43 @@ class TestGithubOrgClient(unittest.TestCase):
             )
 
     @patch("client.get_json")
-    def test_public_repos_method(self, mock_get_json: MagicMock) -> None:
+    def test_public_repos(self, mock_get_json: MagicMock) -> None:
         """Tests the `public_repos` method."""
         test_payload = {
-            'repos_url': "https://api.github.com/users/ZinoChan/repos",
+            'repos_url': "https://api.github.com/users/google/repos",
             'repos': [
-                {"name": "oishi"},
-                {"name": "lapino"},
+                {
+                    "id": 7697149,
+                    "name": "episodes.dart",
+                    "private": False,
+                    "owner": {
+                        "login": "google",
+                        "id": 1342004,
+                    },
+                    "fork": False,
+                    "url": "https://api.github.com/repos/google/episodes.dart",
+                    "created_at": "2013-01-19T00:31:37Z",
+                    "updated_at": "2019-09-23T11:53:58Z",
+                    "has_issues": True,
+                    "forks": 22,
+                    "default_branch": "master",
+                },
+                {
+                    "id": 8566972,
+                    "name": "kratu",
+                    "private": False,
+                    "owner": {
+                        "login": "google",
+                        "id": 1342004,
+                    },
+                    "fork": False,
+                    "url": "https://api.github.com/repos/google/kratu",
+                    "created_at": "2013-03-04T22:52:33Z",
+                    "updated_at": "2019-11-15T22:22:16Z",
+                    "has_issues": True,
+                    "forks": 32,
+                    "default_branch": "master",
+                },
             ]
         }
         mock_get_json.return_value = test_payload["repos"]
@@ -61,8 +97,11 @@ class TestGithubOrgClient(unittest.TestCase):
         ) as mock_public_repos_url:
             mock_public_repos_url.return_value = test_payload["repos_url"]
             self.assertEqual(
-                GithubOrgClient("ZinoChan").public_repos(),
-                ["oishi", "lapino"],
+                GithubOrgClient("google").public_repos(),
+                [
+                    "episodes.dart",
+                    "kratu",
+                ],
             )
             mock_public_repos_url.assert_called_once()
         mock_get_json.assert_called_once()
@@ -71,11 +110,11 @@ class TestGithubOrgClient(unittest.TestCase):
         ({'license': {'key': "bsd-3-clause"}}, "bsd-3-clause", True),
         ({'license': {'key': "bsl-1.0"}}, "bsd-3-clause", False),
     ])
-    def test_has_license_method(self, repo: Dict, key: str, expected: bool) -> None:
+    def test_has_license(self, repo: Dict, key: str, expected: bool) -> None:
         """Tests the `has_license` method."""
-        gh_org_client = GithubOrgClient("ZinoChan")
-        client_has_license = gh_org_client.has_license(repo, key)
-        self.assertEqual(client_has_license, expected)
+        gh_org_client = GithubOrgClient("google")
+        client_has_licence = gh_org_client.has_license(repo, key)
+        self.assertEqual(client_has_licence, expected)
 
 
 @parameterized_class([
@@ -88,7 +127,6 @@ class TestGithubOrgClient(unittest.TestCase):
 ])
 class TestIntegrationGithubOrgClient(unittest.TestCase):
     """Performs integration tests for the `GithubOrgClient` class."""
-
     @classmethod
     def setUpClass(cls) -> None:
         """Sets up class fixtures before running tests."""
@@ -105,14 +143,14 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         cls.get_patcher = patch("requests.get", side_effect=get_payload)
         cls.get_patcher.start()
 
-    def test_public_repos_method(self) -> None:
+    def test_public_repos(self) -> None:
         """Tests the `public_repos` method."""
         self.assertEqual(
             GithubOrgClient("google").public_repos(),
             self.expected_repos,
         )
 
-    def test_public_repos_with_license_method(self) -> None:
+    def test_public_repos_with_license(self) -> None:
         """Tests the `public_repos` method with a license."""
         self.assertEqual(
             GithubOrgClient("google").public_repos(license="apache-2.0"),

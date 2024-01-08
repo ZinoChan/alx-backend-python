@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Unit tests for utility functions in the utils module."""
-
+"""A module for testing the utils module.
+"""
 import unittest
 from typing import Dict, Tuple, Union
 from unittest.mock import patch, Mock
@@ -13,38 +13,39 @@ from utils import (
 )
 
 
-class TestUtils(unittest.TestCase):
-    """Test cases for utility functions."""
-
+class TestAccessNestedMap(unittest.TestCase):
+    """Tests the `access_nested_map` function."""
     @parameterized.expand([
-        ({"key_a": 1}, ("key_a",), 1),
-        ({"key_a": {"key_b": 2}}, ("key_a",), {"key_b": 2}),
-        ({"key_a": {"key_b": 2}}, ("key_a", "key_b"), 2),
+        ({"a": 1}, ("a",), 1),
+        ({"a": {"b": 2}}, ("a",), {"b": 2}),
+        ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
     def test_access_nested_map(
             self,
-            nested_data: Dict,
-            key_path: Tuple[str],
-            expected_result: Union[Dict, int],
+            nested_map: Dict,
+            path: Tuple[str],
+            expected: Union[Dict, int],
     ) -> None:
-        """Tests the access_nested_map function."""
-        self.assertEqual(access_nested_map(
-            nested_data, key_path), expected_result)
+        """Tests `access_nested_map`'s output."""
+        self.assertEqual(access_nested_map(nested_map, path), expected)
 
     @parameterized.expand([
-        ({}, ("key_a",), KeyError),
-        ({"key_a": 1}, ("key_a", "key_b"), KeyError),
+        ({}, ("a",), KeyError),
+        ({"a": 1}, ("a", "b"), KeyError),
     ])
     def test_access_nested_map_exception(
             self,
-            nested_data: Dict,
-            key_path: Tuple[str],
-            expected_exception: Exception,
+            nested_map: Dict,
+            path: Tuple[str],
+            exception: Exception,
     ) -> None:
-        """Tests the exception handling of access_nested_map."""
-        with self.assertRaises(expected_exception):
-            access_nested_map(nested_data, key_path)
+        """Tests `access_nested_map`'s exception raising."""
+        with self.assertRaises(exception):
+            access_nested_map(nested_map, path)
 
+
+class TestGetJson(unittest.TestCase):
+    """Tests the `get_json` function."""
     @parameterized.expand([
         ("http://example.com", {"payload": True}),
         ("http://holberton.io", {"payload": False}),
@@ -54,33 +55,31 @@ class TestUtils(unittest.TestCase):
             test_url: str,
             test_payload: Dict,
     ) -> None:
-        """Tests the get_json function."""
+        """Tests `get_json`'s output."""
         attrs = {'json.return_value': test_payload}
         with patch("requests.get", return_value=Mock(**attrs)) as req_get:
-            result = get_json(test_url)
-            self.assertEqual(result, test_payload)
+            self.assertEqual(get_json(test_url), test_payload)
             req_get.assert_called_once_with(test_url)
 
-    def test_memoize(self) -> None:
-        """Tests the memoize function."""
-        class TestClass:
-            """Sample class for testing memoization."""
 
+class TestMemoize(unittest.TestCase):
+    """Tests the `memoize` function."""
+
+    def test_memoize(self) -> None:
+        """Tests `memoize`'s output."""
+        class TestClass:
             def a_method(self):
-                """A sample method."""
                 return 42
 
             @memoize
             def a_property(self):
-                """A sample memoized property."""
                 return self.a_method()
-
         with patch.object(
                 TestClass,
                 "a_method",
                 return_value=lambda: 42,
-        ) as memoized_method:
-            test_instance = TestClass()
-            self.assertEqual(test_instance.a_property(), 42)
-            self.assertEqual(test_instance.a_property(), 42)
-            memoized_method.assert_called_once()
+        ) as memo_fxn:
+            test_class = TestClass()
+            self.assertEqual(test_class.a_property(), 42)
+            self.assertEqual(test_class.a_property(), 42)
+            memo_fxn.assert_called_once()
